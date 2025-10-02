@@ -69,7 +69,7 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
         OnboardingPageData(
             title = "Exchange contacts instantly\n\n",
             highlightedText = "by bringing two phones together\n",
-            description = "No typing, no scanning. Just bring your phones\nclose and TapNShare does the rest.",
+            description = "No typing, no scanning. Just bring your phones close and TapNShare does the rest.",
             imageContent = {
                 LottieMobileShareAnimation()
             },
@@ -81,7 +81,7 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
         OnboardingPageData(
             title = "Your contact is always\n\n",
             highlightedText = "encrypted and secure",
-            description = "Advanced encryption ensures your personal\ninformation stays private and protected.",
+            description = "Advanced encryption ensures your personal information stays private and protected.",
             imageContent = {
                 ShieldAnimation()
             },

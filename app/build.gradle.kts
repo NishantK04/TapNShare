@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+    id("kotlin-kapt")
 }
 
 android {
@@ -41,6 +43,16 @@ android {
 
 dependencies {
 
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+
+    val room_version = "2.6.1"
+
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    kapt("androidx.room:room-compiler:$room_version") // If using Kotlin Kapt
+    implementation("androidx.room:room-ktx:$room_version") // Coroutines support
+
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     implementation("com.airbnb.android:lottie-compose:6.0.0")
     implementation("com.google.accompanist:accompanist-pager:0.34.0")

@@ -16,3 +16,6 @@ val LightBlueAccent = Color(0xFF60a5fa) // Used for blue elements and text
 val GreenAccent = Color(0xFF22c55e) // Used for green elements and text
 val PurpleAccent = Color(0xFF8b5cf6) // Used for purple elements
 val RedAccent = Color(0xFFef4444) // Used for red elements
+
+val WarningYellow = Color(0xFFFF9800)
+val WarningDarkBackground = Color(0xFF4C3600).copy(alpha = 0.5f)

@@ -1,59 +1,104 @@
 package com.nishant.tapnshare
 
-import android.content.Context
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.*
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import com.nishant.tapnshare.ui.theme.TapNShareTheme // Assuming you have a Theme file
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
+import com.nishant.tapnshare.ui.theme.TapNShareTheme
+import com.nishant.tapnshare.viewmodel.PermissionsViewModel
+import com.nishant.tapnshare.viewmodel.UserProfileViewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val PREFS_NAME = "TapNSharePrefs"
-    private val ONBOARDING_COMPLETED_KEY = "is_onboarding_completed"
+    private val bluetoothPermission: String
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Manifest.permission.BLUETOOTH_CONNECT
+        } else {
+            Manifest.permission.BLUETOOTH
+        }
+
+    private val userProfileViewModel: UserProfileViewModel by lazy {
+        ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[UserProfileViewModel::class.java]
+    }
+
+    private val permissionsViewModel: PermissionsViewModel by lazy {
+        ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[PermissionsViewModel::class.java]
+    }
+
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            permissionsViewModel.setBluetoothGranted(isGranted)
+            permissionsViewModel.setHasAskedBluetoothPermission(true) // Mark permission as asked
+            restartActivity()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
         setContent {
-            // Apply your application theme
             TapNShareTheme {
-                AppNavigator()
+                val context = LocalContext.current
+                val isBluetoothGranted by permissionsViewModel.isBluetoothGranted.collectAsState()
+                val isBluetoothToggleOn by permissionsViewModel.isBluetoothToggleOn.collectAsState()
+                val hasAskedBluetoothPermission by permissionsViewModel.hasAskedBluetoothPermission.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    // ✅ Request permission if:
+                    // - toggle is ON and permission not granted
+                    // - OR first launch and permission not granted
+                    if ((!isBluetoothGranted && isBluetoothToggleOn) || (!isBluetoothGranted && !hasAskedBluetoothPermission)) {
+                        checkAndRequestPermission()
+                    }
+                }
+
+                MainScreen(
+                    isBluetoothPermitted = isBluetoothGranted,
+                    userProfileViewModel = userProfileViewModel,
+                    onOpenSettings = {
+                        context.startActivity(Intent(context, SettingsActivity::class.java))
+                    },
+                    requestBluetoothPermission = { checkAndRequestPermission() }
+                )
             }
         }
     }
 
-    // Composable that handles the primary navigation logic
-    @Composable
-    fun AppNavigator() {
-        val context = LocalContext.current
-
-        // 1. Get SharedPreferences instance (Remembered to avoid re-creation on recomposition)
-        val sharedPrefs = remember {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        }
-
-        // 2. State variable to hold whether onboarding is complete
-        // Load the stored state. Defaults to false (Onboarding needed).
-        var isOnboardingCompleted by remember {
-            mutableStateOf(sharedPrefs.getBoolean(ONBOARDING_COMPLETED_KEY, false))
-        }
-
-        // 3. Define the action to complete onboarding
-        val completeOnboarding: () -> Unit = {
-            // Persist the state change
-            sharedPrefs.edit().putBoolean(ONBOARDING_COMPLETED_KEY, true).apply()
-            // Update the state variable to trigger recomposition and switch screens
-            isOnboardingCompleted = true
-        }
-
-        // 4. Conditional UI Logic
-        if (isOnboardingCompleted) {
-            // Show the main application screen
-            MainScreen()
+    private fun checkAndRequestPermission() {
+        if (ContextCompat.checkSelfPermission(this, bluetoothPermission) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsViewModel.setBluetoothGranted(true)
         } else {
-            // Show the onboarding flow, passing the completion function
-            OnboardingScreen(onGetStarted = completeOnboarding)
+            permissionLauncher.launch(bluetoothPermission)
         }
+    }
+
+    private fun restartActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        finish()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        permissionsViewModel.refreshBluetoothPermission()
     }
 }
